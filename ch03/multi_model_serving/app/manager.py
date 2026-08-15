@@ -39,5 +39,16 @@ class ModelManager:
         return self.model_cache[model_id]
     
     def list_loaded_models(self) -> Dict[str, str]:
-        return {model_id: worker.model_metadata.name 
-                for model_id, worker in self.model_cache.items()} 
+        return {model_id: worker.model_metadata.name
+                for model_id, worker in self.model_cache.items()}
+
+    def clear_cache(self):
+        for model_id in list(self.model_cache.keys()):
+            self.model_engine.delete_worker(model_id)
+        self.model_cache.clear()
+
+    def set_max_models(self, max_models: int):
+        self.max_models = max_models
+        while len(self.model_cache) > self.max_models:
+            model_id, _ = self.model_cache.popitem(last=False)
+            self.model_engine.delete_worker(model_id) 

@@ -1,0 +1,1664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLM Serving Interface & Playground</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --border-color: #334155;
+      --primary-color: #3b82f6;
+      --primary-hover: #2563eb;
+      --accent-color: #10b981;
+      --accent-vllm: #8b5cf6;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --input-bg: #0f172a;
+      --token-bg: rgba(59, 130, 246, 0.15);
+      --code-font: 'JetBrains Mono', monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background-color: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-badge {
+      background: linear-gradient(135deg, var(--primary-color), var(--accent-vllm));
+      color: white;
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      letter-spacing: 0.05em;
+    }
+
+    .title {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .server-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      background: #0f172a;
+      padding: 0.4rem 0.8rem;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #ef4444;
+      display: inline-block;
+    }
+
+    .status-dot.online {
+      background-color: var(--accent-color);
+      box-shadow: 0 0 8px var(--accent-color);
+    }
+
+    main {
+      flex: 1;
+      max-width: 1200px;
+      width: 100%;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 0.5rem;
+    }
+
+    .tab-btn {
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      padding: 0.6rem 1.2rem;
+      font-size: 0.95rem;
+      font-weight: 500;
+      cursor: pointer;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-main);
+      background: rgba(255, 255, 255, 0.05);
+    }
+
+    .tab-btn.active {
+      color: white;
+      background: var(--primary-color);
+    }
+
+    .tab-btn.active.vllm-tab {
+      background: var(--accent-vllm);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 900px) {
+      .tab-content.active {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .preset-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .preset-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .preset-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+      border-color: var(--primary-color);
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    textarea, input[type="text"] {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 0.8rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    textarea:focus, input[type="text"]:focus {
+      border-color: var(--primary-color);
+    }
+
+    .btn-action {
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn-action:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-action:active {
+      transform: scale(0.98);
+    }
+
+    .btn-action:disabled {
+      background: var(--border-color);
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .btn-vllm {
+      background: var(--accent-vllm);
+    }
+
+    .btn-vllm:hover {
+      background: #7c3aed;
+    }
+
+    .metrics-bar {
+      display: flex;
+      gap: 1rem;
+      padding: 0.75rem;
+      background: var(--input-bg);
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    .metric-item {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .metric-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .metric-value {
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: var(--code-font);
+      color: var(--accent-color);
+    }
+
+    .output-box {
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1rem;
+      min-height: 200px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: var(--code-font);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .output-box .prompt-text {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .output-box .token {
+      display: inline;
+      background-color: var(--token-bg);
+      border-radius: 2px;
+      animation: fadeIn 0.15s ease-in;
+    }
+
+    .cursor {
+      display: inline-block;
+      width: 8px;
+      height: 1em;
+      background-color: var(--primary-color);
+      margin-left: 2px;
+      vertical-align: middle;
+      animation: blink 1s infinite;
+    }
+
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0; }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; background-color: rgba(59, 130, 246, 0.4); }
+      to { opacity: 1; background-color: var(--token-bg); }
+    }
+
+    .batch-inputs {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      max-height: 250px;
+      overflow-y: auto;
+    }
+
+    .batch-input-row {
+      display: flex;
+      gap: 0.5rem;
+      align-items: center;
+    }
+
+    .btn-remove {
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 6px;
+      width: 36px;
+      height: 36px;
+      cursor: pointer;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .btn-remove:hover {
+      background: rgba(239, 68, 68, 0.3);
+    }
+
+    .btn-add-prompt {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+      border: 1px dashed var(--border-color);
+      padding: 0.5rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      text-align: center;
+      transition: background 0.2s;
+    }
+
+    .btn-add-prompt:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--primary-color);
+    }
+
+    .batch-results {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .batch-card {
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.8rem 1rem;
+    }
+
+    .batch-card-prompt {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.4rem;
+      font-weight: 500;
+    }
+
+    .batch-card-output {
+      font-family: var(--code-font);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    /* Execution Pipeline Visualization */
+    .pipeline-section {
+      border-top: 1px solid var(--border-color);
+      padding-top: 1.2rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .pipeline-heading {
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .pipe-steps-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.4rem;
+      --pipe-accent: var(--primary-color);
+      --pipe-accent-soft: rgba(59, 130, 246, 0.15);
+    }
+
+    .pipe-steps-row.pipe-vllm {
+      --pipe-accent: var(--accent-vllm);
+      --pipe-accent-soft: rgba(139, 92, 246, 0.15);
+    }
+
+    .pipe-arrow {
+      color: var(--text-muted);
+      font-size: 1rem;
+    }
+
+    .pipe-step {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.4rem 0.6rem;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .pipe-step:hover {
+      border-color: var(--pipe-accent);
+      color: var(--text-main);
+    }
+
+    .pipe-num {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.08);
+      font-size: 0.7rem;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .pipe-step.active {
+      color: var(--text-main);
+      border-color: var(--pipe-accent);
+      background: var(--pipe-accent-soft);
+      animation: pipePulse 1.2s ease-in-out infinite;
+    }
+
+    .pipe-step.active .pipe-num {
+      background: var(--pipe-accent);
+      color: white;
+    }
+
+    .pipe-step.done {
+      color: var(--text-main);
+      border-color: var(--pipe-accent);
+      background: var(--pipe-accent-soft);
+    }
+
+    .pipe-step.done .pipe-num {
+      background: var(--pipe-accent);
+      color: white;
+    }
+
+    .pipe-step.error {
+      color: #ef4444;
+      border-color: #ef4444;
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .pipe-step.error .pipe-num {
+      background: #ef4444;
+      color: white;
+    }
+
+    .component-diagram {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      margin-top: 0.6rem;
+    }
+    .diagram-box {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.55rem 0.85rem;
+      background: var(--input-bg);
+      transition: all 0.25s ease;
+    }
+    .diagram-box-label { font-weight: 600; font-size: 0.85rem; }
+    .diagram-box-caption { font-size: 0.72rem; color: var(--text-muted); min-height: 1.1em; margin-top: 0.15rem; }
+    .diagram-box.focus {
+      border-color: var(--pipe-accent, var(--primary-color));
+      background: var(--pipe-accent-soft, rgba(59, 130, 246, 0.15));
+      box-shadow: 0 0 10px var(--pipe-accent, var(--primary-color));
+    }
+    .diagram-box.done { border-color: var(--pipe-accent, var(--primary-color)); }
+    .diagram-box.error { border-color: #ef4444; background: rgba(239, 68, 68, 0.12); }
+    .diagram-box.dimmed { opacity: 0.35; }
+    .diagram-arrow-vert { text-align: center; color: var(--text-muted); font-size: 0.85rem; line-height: 1; }
+
+    @keyframes pipePulse {
+      0%, 100% { box-shadow: 0 0 4px var(--pipe-accent); }
+      50% { box-shadow: 0 0 14px var(--pipe-accent); }
+    }
+
+    .pipeline-detail {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.6rem 0.8rem;
+      min-height: 2.4em;
+    }
+
+    .replay-bar {
+      display: none;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .replay-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .replay-btn:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+      border-color: var(--primary-color);
+    }
+
+    .replay-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .replay-label {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-left: 0.25rem;
+    }
+
+    .pipeline-caption {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      font-style: italic;
+      line-height: 1.4;
+    }
+
+    .pipeline-note {
+      font-size: 0.78rem;
+      color: #f59e0b;
+    }
+
+    .pipe-slots-row {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .pipe-slot {
+      width: 26px;
+      height: 26px;
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+    }
+
+    .pipe-slot.filled {
+      background: var(--primary-color);
+      border-color: var(--primary-color);
+      color: white;
+      box-shadow: 0 0 8px var(--primary-color);
+    }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      border-top: 1px solid var(--border-color);
+      margin-top: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <span class="logo-badge">OPT-125M</span>
+      <span class="title">LLM Serving Playground</span>
+    </div>
+    <div class="server-status">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Checking Backend...</span>
+    </div>
+  </header>
+
+  <main>
+    <nav class="tabs">
+      <button class="tab-btn active" onclick="switchTab('basic')">
+        🎯 Basic Single Mode (/basic_generate)
+      </button>
+      <button class="tab-btn" onclick="switchTab('stream')">
+        ⚡ Streaming Mode (/generate_stream)
+      </button>
+      <button class="tab-btn" onclick="switchTab('batch')">
+        📦 Batch Generation (/generate)
+      </button>
+      <button class="tab-btn vllm-tab" onclick="switchTab('vllm')">
+        🚀 vLLM Batch (/generate_vllm)
+      </button>
+    </nav>
+
+    <!-- BASIC SINGLE TAB -->
+    <div id="tab-basic" class="tab-content active">
+      <div class="card">
+        <div class="card-title">
+          <span>Single Prompt Input</span>
+        </div>
+
+        <div class="input-group">
+          <label>Presets:</label>
+          <div class="preset-container">
+            <button class="preset-btn" onclick="setPrompt('basicPrompt', 'The best programming language for AI is')">The best programming language...</button>
+            <button class="preset-btn" onclick="setPrompt('basicPrompt', 'In a quiet village near the mountains,')">In a quiet village...</button>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label for="basicPrompt">Prompt:</label>
+          <textarea id="basicPrompt" rows="5" placeholder="Enter prompt...">The best programming language for AI is</textarea>
+        </div>
+
+        <button id="btnBasic" class="btn-action" onclick="runBasic()">
+          <span>Generate Text</span>
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>Generated Response</span>
+        </div>
+
+        <div class="metrics-bar">
+          <div class="metric-item">
+            <span class="metric-label">Latency</span>
+            <span class="metric-value" id="basicLatency">-</span>
+          </div>
+        </div>
+
+        <div id="basicOutput" class="output-box">
+          <span class="prompt-text">Response text will appear here...</span>
+        </div>
+
+        <div class="pipeline-section">
+          <div class="pipeline-heading">🧭 Execution Pipeline</div>
+          <div class="pipe-steps-row" id="basicPipelineSteps"></div>
+          <div class="pipeline-detail" id="basicPipelineDetail">Hover or click a step to see what happens internally.</div>
+          <div class="replay-bar" id="basicReplayBar" style="display:none;">
+            <button class="replay-btn" id="basicReplayPrev" onclick="pipelineReplayPrev('basic')">⏮ Prev</button>
+            <button class="replay-btn" id="basicReplayPlay" onclick="pipelineReplayToggle('basic')">▶ Replay</button>
+            <button class="replay-btn" id="basicReplayNext" onclick="pipelineReplayNext('basic')">Next ⏭</button>
+            <span class="replay-label" id="basicReplayLabel">Step 1/6</span>
+          </div>
+          <div class="component-diagram" id="basicDiagram">
+            <div class="diagram-box" data-component="api"><div class="diagram-box-label">🌐 API Server</div><div class="diagram-box-caption"></div></div>
+            <div class="diagram-arrow-vert">↓</div>
+            <div class="diagram-box" data-component="engine"><div class="diagram-box-label">🧠 LLM Engine</div><div class="diagram-box-caption"></div></div>
+            <div class="diagram-arrow-vert">↓</div>
+            <div class="diagram-box" data-component="workload"><div class="diagram-box-label">📋 Workload Manager</div><div class="diagram-box-caption"></div></div>
+            <div class="diagram-arrow-vert">↓</div>
+            <div class="diagram-box" data-component="executor"><div class="diagram-box-label">⚙️ Model Executor</div><div class="diagram-box-caption"></div></div>
+          </div>
+          <div class="pipeline-caption">동기 호출: 부모(API 서버)와 자식(ModelWorker) 프로세스는 직접 함수 호출이 불가능해 task_queue/result_queue라는 IPC(프로세스 간 통신)로 연결됩니다.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- STREAMING TAB -->
+    <div id="tab-stream" class="tab-content">
+      <div class="card">
+        <div class="card-title">
+          <span>Prompt Input</span>
+        </div>
+
+        <div class="input-group">
+          <label>Preset Quick Prompts:</label>
+          <div class="preset-container">
+            <button class="preset-btn" onclick="setPrompt('streamPrompt', 'Hello, I am')">Hello, I am</button>
+            <button class="preset-btn" onclick="setPrompt('streamPrompt', 'Artificial intelligence will change the world by')">Artificial intelligence will...</button>
+            <button class="preset-btn" onclick="setPrompt('streamPrompt', 'The secret to learning deep learning is')">The secret to learning...</button>
+            <button class="preset-btn" onclick="setPrompt('streamPrompt', 'Once upon a time in a distant galaxy')">Once upon a time...</button>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label for="streamPrompt">Enter Prompt:</label>
+          <textarea id="streamPrompt" rows="5" placeholder="Type your prompt here...">Hello, I am</textarea>
+        </div>
+
+        <button id="btnStream" class="btn-action" onclick="runStream()">
+          <span>Generate Stream</span>
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>Real-time Response Stream</span>
+        </div>
+
+        <div class="metrics-bar">
+          <div class="metric-item">
+            <span class="metric-label">Time to First Token</span>
+            <span class="metric-value" id="streamTTFT">-</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Tokens</span>
+            <span class="metric-value" id="streamTokenCount">0</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Tokens / Sec</span>
+            <span class="metric-value" id="streamTPS">-</span>
+          </div>
+        </div>
+
+        <div id="streamOutput" class="output-box">
+          <span class="prompt-text">Output tokens will stream here...</span>
+        </div>
+
+        <div class="pipeline-section">
+          <div class="pipeline-heading">🧭 Execution Pipeline</div>
+          <div class="pipe-steps-row" id="streamPipelineSteps"></div>
+          <div class="pipe-slots-row" id="streamPipelineSlots">
+            <span>Active Batch Slots:</span>
+            <div class="pipe-slot" data-slot="1">1</div>
+            <div class="pipe-slot" data-slot="2">2</div>
+            <div class="pipe-slot" data-slot="3">3</div>
+            <div class="pipe-slot" data-slot="4">4</div>
+          </div>
+          <div class="pipeline-detail" id="streamPipelineDetail">Hover or click a step to see what happens internally.</div>
+          <div class="replay-bar" id="streamReplayBar" style="display:none;">
+            <button class="replay-btn" id="streamReplayPrev" onclick="pipelineReplayPrev('stream')">⏮ Prev</button>
+            <button class="replay-btn" id="streamReplayPlay" onclick="pipelineReplayToggle('stream')">▶ Replay</button>
+            <button class="replay-btn" id="streamReplayNext" onclick="pipelineReplayNext('stream')">Next ⏭</button>
+            <span class="replay-label" id="streamReplayLabel">Step 1/6</span>
+          </div>
+          <div class="component-diagram" id="streamDiagram">
+            <div class="diagram-box" data-component="api"><div class="diagram-box-label">🌐 API Server</div><div class="diagram-box-caption"></div></div>
+            <div class="diagram-arrow-vert">↓</div>
+            <div class="diagram-box" data-component="engine"><div class="diagram-box-label">🧠 LLM Engine</div><div class="diagram-box-caption"></div></div>
+            <div class="diagram-arrow-vert">↓</div>
+            <div class="diagram-box" data-component="workload"><div class="diagram-box-label">📋 Workload Manager</div><div class="diagram-box-caption"></div></div>
+            <div class="diagram-arrow-vert">↓</div>
+            <div class="diagram-box" data-component="executor"><div class="diagram-box-label">⚙️ Model Executor</div><div class="diagram-box-caption"></div></div>
+          </div>
+          <div class="pipeline-caption">Batching과 Streaming은 반대 개념이 아닙니다 — 서버 내부에서는 여러 요청을 묶어 계산하지만, 결과는 각자의 큐를 통해 개별적으로 스트리밍됩니다.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- BATCH GENERATION TAB -->
+    <div id="tab-batch" class="tab-content">
+      <div class="card">
+        <div class="card-title">
+          <span>Batch Prompts Configuration</span>
+        </div>
+
+        <div class="input-group">
+          <label>Batch Prompts:</label>
+          <div id="batchInputList" class="batch-inputs">
+            <div class="batch-input-row">
+              <input type="text" value="Hello, I am" class="batch-prompt-input" />
+              <button class="btn-remove" onclick="removeBatchRow(this)">×</button>
+            </div>
+            <div class="batch-input-row">
+              <input type="text" value="The weather is" class="batch-prompt-input" />
+              <button class="btn-remove" onclick="removeBatchRow(this)">×</button>
+            </div>
+            <div class="batch-input-row">
+              <input type="text" value="Once upon a time" class="batch-prompt-input" />
+              <button class="btn-remove" onclick="removeBatchRow(this)">×</button>
+            </div>
+          </div>
+          <button class="btn-add-prompt" onclick="addBatchRow()">+ Add Prompt to Batch</button>
+        </div>
+
+        <button id="btnBatch" class="btn-action" onclick="runBatch(false)">
+          <span>Run Batch Generation</span>
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>Batch Outputs</span>
+        </div>
+
+        <div class="metrics-bar">
+          <div class="metric-item">
+            <span class="metric-label">Total Latency</span>
+            <span class="metric-value" id="batchLatency">-</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Prompts Processed</span>
+            <span class="metric-value" id="batchCount">-</span>
+          </div>
+        </div>
+
+        <div id="batchOutputList" class="batch-results">
+          <span class="prompt-text">Batch results will be listed here...</span>
+        </div>
+
+        <div class="pipeline-section">
+          <div class="pipeline-heading">🧭 Execution Pipeline</div>
+          <div class="pipe-steps-row" id="batchPipelineSteps"></div>
+          <div class="pipeline-detail" id="batchPipelineDetail">Hover or click a step to see what happens internally.</div>
+          <div class="replay-bar" id="batchReplayBar" style="display:none;">
+            <button class="replay-btn" id="batchReplayPrev" onclick="pipelineReplayPrev('batch')">⏮ Prev</button>
+            <button class="replay-btn" id="batchReplayPlay" onclick="pipelineReplayToggle('batch')">▶ Replay</button>
+            <button class="replay-btn" id="batchReplayNext" onclick="pipelineReplayNext('batch')">Next ⏭</button>
+            <span class="replay-label" id="batchReplayLabel">Step 1/6</span>
+          </div>
+          <div class="component-diagram" id="batchDiagram">
+            <div class="diagram-box" data-component="api"><div class="diagram-box-label">🌐 API Server</div><div class="diagram-box-caption"></div></div>
+            <div class="diagram-arrow-vert">↓</div>
+            <div class="diagram-box" data-component="engine"><div class="diagram-box-label">🧠 LLM Engine</div><div class="diagram-box-caption"></div></div>
+            <div class="diagram-arrow-vert">↓</div>
+            <div class="diagram-box" data-component="workload"><div class="diagram-box-label">📋 Workload Manager</div><div class="diagram-box-caption"></div></div>
+            <div class="diagram-arrow-vert">↓</div>
+            <div class="diagram-box" data-component="executor"><div class="diagram-box-label">⚙️ Model Executor</div><div class="diagram-box-caption"></div></div>
+          </div>
+          <div class="pipeline-note" id="batchPipelineNote" style="display:none;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- vLLM BATCH TAB -->
+    <div id="tab-vllm" class="tab-content">
+      <div class="card">
+        <div class="card-title">
+          <span>vLLM Engine Batch Prompts</span>
+        </div>
+
+        <div class="input-group">
+          <label>Batch Prompts for vLLM:</label>
+          <div id="vllmInputList" class="batch-inputs">
+            <div class="batch-input-row">
+              <input type="text" value="Deep learning models excel at" class="vllm-prompt-input" />
+              <button class="btn-remove" onclick="removeBatchRow(this)">×</button>
+            </div>
+            <div class="batch-input-row">
+              <input type="text" value="The future of high performance inference" class="vllm-prompt-input" />
+              <button class="btn-remove" onclick="removeBatchRow(this)">×</button>
+            </div>
+            <div class="batch-input-row">
+              <input type="text" value="PagedAttention optimizes KV cache by" class="vllm-prompt-input" />
+              <button class="btn-remove" onclick="removeBatchRow(this)">×</button>
+            </div>
+          </div>
+          <button class="btn-add-prompt" onclick="addVllmRow()">+ Add Prompt to vLLM Batch</button>
+        </div>
+
+        <button id="btnVllm" class="btn-action btn-vllm" onclick="runBatch(true)">
+          <span>Run vLLM Generation</span>
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">
+          <span>vLLM Engine Results</span>
+        </div>
+
+        <div class="metrics-bar">
+          <div class="metric-item">
+            <span class="metric-label">vLLM Total Latency</span>
+            <span class="metric-value" id="vllmLatency">-</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Prompts Processed</span>
+            <span class="metric-value" id="vllmCount">-</span>
+          </div>
+        </div>
+
+        <div id="vllmOutputList" class="batch-results">
+          <span class="prompt-text">vLLM output results will be listed here...</span>
+        </div>
+
+        <div class="pipeline-section">
+          <div class="pipeline-heading">🧭 Execution Pipeline</div>
+          <div class="pipe-steps-row pipe-vllm" id="vllmPipelineSteps"></div>
+          <div class="pipeline-detail" id="vllmPipelineDetail">Hover or click a step to see what happens internally.</div>
+          <div class="replay-bar" id="vllmReplayBar" style="display:none;">
+            <button class="replay-btn" id="vllmReplayPrev" onclick="pipelineReplayPrev('vllm')">⏮ Prev</button>
+            <button class="replay-btn" id="vllmReplayPlay" onclick="pipelineReplayToggle('vllm')">▶ Replay</button>
+            <button class="replay-btn" id="vllmReplayNext" onclick="pipelineReplayNext('vllm')">Next ⏭</button>
+            <span class="replay-label" id="vllmReplayLabel">Step 1/4</span>
+          </div>
+          <div class="component-diagram pipe-vllm" id="vllmDiagram">
+            <div class="diagram-box" data-component="api"><div class="diagram-box-label">🌐 API Server</div><div class="diagram-box-caption"></div></div>
+            <div class="diagram-arrow-vert">↓</div>
+            <div class="diagram-box" data-component="engine"><div class="diagram-box-label">🧠 LLM Engine</div><div class="diagram-box-caption"></div></div>
+            <div class="diagram-arrow-vert">↓</div>
+            <div class="diagram-box dimmed" data-component="workload"><div class="diagram-box-label">📋 Workload Manager</div><div class="diagram-box-caption">vLLM 엔진 내부로 흡수됨 — 이 경로에서는 사용되지 않음</div></div>
+            <div class="diagram-arrow-vert">↓</div>
+            <div class="diagram-box dimmed" data-component="executor"><div class="diagram-box-label">⚙️ Model Executor</div><div class="diagram-box-caption">vLLM 엔진 내부로 흡수됨 — 이 경로에서는 사용되지 않음</div></div>
+          </div>
+          <div class="pipeline-caption">수동 구현(다른 3개 탭)은 FIFO + 고정 배치 크기(4)를 직접 관리하지만, vLLM은 이 모든 복잡도를 프레임워크 내부로 위임합니다.</div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer>
+    LLM Model Serving Practice & Sandbox • Powered by FastAPI & OPT-125M / vLLM
+  </footer>
+
+  <script>
+    const API_BASE = window.location.origin;
+
+    // Health check on load
+    async function checkHealth() {
+      const statusDot = document.getElementById('statusDot');
+      const statusText = document.getElementById('statusText');
+      try {
+        const startTime = performance.now();
+        const res = await fetch(`${API_BASE}/health`);
+        const elapsed = Math.round(performance.now() - startTime);
+        if (res.ok) {
+          statusDot.classList.add('online');
+          statusText.textContent = `Online (${elapsed} ms)`;
+        } else {
+          statusDot.classList.remove('online');
+          statusText.textContent = 'Server Error';
+        }
+      } catch (err) {
+        statusDot.classList.remove('online');
+        statusText.textContent = 'Backend Offline';
+      }
+    }
+    checkHealth();
+    setInterval(checkHealth, 10000);
+
+    // Tab Switching
+    function switchTab(tabName) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+      event.currentTarget.classList.add('active');
+      document.getElementById(`tab-${tabName}`).classList.add('active');
+    }
+
+    // Set Preset Prompt
+    function setPrompt(elementId, text) {
+      document.getElementById(elementId).value = text;
+    }
+
+    // Dynamic Batch Input Rows
+    function addBatchRow() {
+      const container = document.getElementById('batchInputList');
+      const row = document.createElement('div');
+      row.className = 'batch-input-row';
+      row.innerHTML = `
+        <input type="text" value="New batch prompt..." class="batch-prompt-input" />
+        <button class="btn-remove" onclick="removeBatchRow(this)">×</button>
+      `;
+      container.appendChild(row);
+    }
+
+    function addVllmRow() {
+      const container = document.getElementById('vllmInputList');
+      const row = document.createElement('div');
+      row.className = 'batch-input-row';
+      row.innerHTML = `
+        <input type="text" value="New vLLM prompt..." class="vllm-prompt-input" />
+        <button class="btn-remove" onclick="removeBatchRow(this)">×</button>
+      `;
+      container.appendChild(row);
+    }
+
+    function removeBatchRow(btn) {
+      const row = btn.parentElement;
+      if (row.parentElement.children.length > 1) {
+        row.remove();
+      }
+    }
+
+    // ---------- Execution Pipeline Visualization ----------
+    const PIPELINE_STEPS = {
+      basic: [
+        { label: 'Client → API', desc: '브라우저가 POST /basic_generate 요청을 FastAPI 서버로 전송', component: 'api' },
+        { label: 'LLMEngine.basic_generate()', desc: 'prompt를 Sequence 객체로 감싸 고유 ID 부여', component: 'engine' },
+        { label: 'ModelExecutor.execute()', desc: 'task_queue.put()으로 자식 프로세스(ModelWorker)에 작업 전달, result_queue.get()으로 블로킹 대기', component: 'executor' },
+        { label: 'ModelWorker (subprocess)', desc: '별도 프로세스에서 무한 루프로 task_queue.get() 대기 중이다가 요청을 받으면 model.generate()로 실제 추론 실행', component: 'executor' },
+        { label: 'result_queue.put()', desc: '생성된 텍스트를 결과 큐에 담아 부모 프로세스로 반환', component: 'executor' },
+        { label: 'Response → Client', desc: 'LLMEngine이 결과를 받아 request_id로 매핑 후 JSON 응답으로 클라이언트에 반환', component: 'api' },
+      ],
+      stream: [
+        { label: 'Client → SSE 연결', desc: 'POST /generate_stream, 서버가 StreamingResponse(text/event-stream)로 응답 시작', component: 'api' },
+        { label: 'event_generator() 등록', desc: 'asyncio.Queue 생성 후 workload_manager.add_streaming_request()로 이 prompt를 등록', component: 'engine' },
+        { label: '배치 슬롯 편입 (최대 4개)', desc: '백그라운드 스레드(requests_processing_loop)가 get_next_batch(is_streaming=True)로 활성 배치에 편입, FIFO + 고정 슬롯 4개', component: 'workload' },
+        { label: '토큰 1개씩 생성', desc: '매 반복마다 배치의 각 prompt에 대해 딱 1개의 다음 토큰만 생성(전체 생성이 아님)', component: 'executor' },
+        { label: '개인 큐로 전달', desc: '생성된 토큰을 이 요청 전용 asyncio.Queue(client_stream)에 push', component: 'executor' },
+        { label: 'SSE로 스트리밍', desc: "event_generator가 큐에서 꺼내 'data: {token}\\n\\n' 형태로 yield, 브라우저가 즉시 렌더링", component: 'api' },
+      ],
+      batch: [
+        { label: 'Client → API', desc: 'N개의 prompt를 배열로 담아 POST /generate 전송', component: 'api' },
+        { label: 'Sequence 등록', desc: '각 prompt가 개별 Sequence로 변환되어 FIFO 방식 incoming_queue에 등록', component: 'workload' },
+        { label: '배치 구성 (최대 4개씩)', desc: 'get_next_batch()가 큐에서 최대 4개까지 꺼내 하나의 실행 배치로 묶음 — 다른 사용자의 prompt와 섞일 수 있음', component: 'workload' },
+        { label: 'model_executor.execute_batch()', desc: '묶인 배치를 한 번의 모델 추론 호출로 처리해 GPU/CPU 활용도를 높임', component: 'executor' },
+        { label: '결과를 ID로 재매핑', desc: '생성된 텍스트를 원래 prompt의 request_id로 다시 연결', component: 'engine' },
+        { label: 'Response → Client', desc: '입력 순서 그대로 generated_texts 배열을 반환', component: 'api' },
+      ],
+      vllm: [
+        { label: 'Client → API', desc: 'prompt 배열을 POST /generate_vllm으로 전송', component: 'api' },
+        { label: 'SamplingParams 구성', desc: 'temperature, top_p, max_tokens 등 생성 옵션 설정', component: 'engine' },
+        { label: 'vLLM.generate() (내부 위임)', desc: 'PagedAttention + Continuous Batching으로 vLLM이 스케줄링/배치/KV 캐시 관리를 전부 자동 처리', component: 'engine' },
+        { label: 'Response → Client', desc: '입력 순서 그대로 outputs 반환', component: 'api' },
+      ],
+    };
+
+    const DIAGRAM_COMPONENTS = ['api', 'engine', 'workload', 'executor'];
+
+    function focusComponentReset(tabKey) {
+      const diagram = document.getElementById(tabKey + 'Diagram');
+      if (!diagram) return;
+      diagram.querySelectorAll('.diagram-box').forEach(box => {
+        box.classList.remove('focus', 'done', 'error');
+        if (!box.classList.contains('dimmed')) {
+          const cap = box.querySelector('.diagram-box-caption');
+          if (cap) cap.textContent = '';
+        }
+      });
+    }
+
+    function focusComponent(tabKey, idx) {
+      const diagram = document.getElementById(tabKey + 'Diagram');
+      if (!diagram) return;
+      const steps = PIPELINE_STEPS[tabKey];
+      const step = steps[idx];
+      const currentKey = step ? step.component : null;
+      const visited = new Set();
+      for (let i = 0; i < idx; i++) {
+        if (steps[i] && steps[i].component !== currentKey) visited.add(steps[i].component);
+      }
+      DIAGRAM_COMPONENTS.forEach(key => {
+        const box = diagram.querySelector(`[data-component="${key}"]`);
+        if (!box || box.classList.contains('dimmed')) return;
+        box.classList.remove('error');
+        box.classList.toggle('focus', key === currentKey);
+        box.classList.toggle('done', key !== currentKey && visited.has(key));
+        const cap = box.querySelector('.diagram-box-caption');
+        if (cap) cap.textContent = (key === currentKey && step) ? step.label : '';
+      });
+    }
+
+    function focusComponentComplete(tabKey) {
+      const diagram = document.getElementById(tabKey + 'Diagram');
+      if (!diagram) return;
+      const usedComponents = new Set(PIPELINE_STEPS[tabKey].map(s => s.component));
+      diagram.querySelectorAll('.diagram-box').forEach(box => {
+        if (box.classList.contains('dimmed')) return;
+        box.classList.remove('focus', 'error');
+        if (usedComponents.has(box.dataset.component)) {
+          box.classList.add('done');
+        }
+      });
+    }
+
+    function focusComponentError(tabKey, idx) {
+      const diagram = document.getElementById(tabKey + 'Diagram');
+      if (!diagram) return;
+      const steps = PIPELINE_STEPS[tabKey];
+      const step = steps[idx];
+      const currentKey = step ? step.component : null;
+      const visited = new Set();
+      for (let i = 0; i < idx; i++) {
+        if (steps[i] && steps[i].component !== currentKey) visited.add(steps[i].component);
+      }
+      DIAGRAM_COMPONENTS.forEach(key => {
+        const box = diagram.querySelector(`[data-component="${key}"]`);
+        if (!box || box.classList.contains('dimmed')) return;
+        box.classList.remove('focus');
+        box.classList.toggle('error', key === currentKey);
+        box.classList.toggle('done', key !== currentKey && visited.has(key));
+        const cap = box.querySelector('.diagram-box-caption');
+        if (cap) cap.textContent = (key === currentKey && step) ? step.label : '';
+      });
+    }
+
+    const pipelineState = {};
+
+    function buildPipeline(tabKey, containerId, detailId) {
+      const container = document.getElementById(containerId);
+      const steps = PIPELINE_STEPS[tabKey];
+      container.innerHTML = '';
+
+      const stepEls = steps.map((step, idx) => {
+        if (idx > 0) {
+          const arrow = document.createElement('span');
+          arrow.className = 'pipe-arrow';
+          arrow.textContent = '→';
+          container.appendChild(arrow);
+        }
+        const stepEl = document.createElement('div');
+        stepEl.className = 'pipe-step pending';
+        stepEl.innerHTML = `<span class="pipe-num">${idx + 1}</span><span class="pipe-label">${step.label}</span>`;
+        stepEl.addEventListener('mouseenter', () => showPipelineDetail(tabKey, idx));
+        stepEl.addEventListener('mouseleave', () => showPipelineDetail(tabKey, pipelineState[tabKey].currentIndex));
+        stepEl.addEventListener('click', () => showPipelineDetail(tabKey, idx));
+        container.appendChild(stepEl);
+        return stepEl;
+      });
+
+      pipelineState[tabKey] = { steps: stepEls, currentIndex: -1, detailId, lastRun: null, replayIndex: -1, replayTimer: null };
+      focusComponentReset(tabKey);
+      showPipelineDetail(tabKey, -1);
+    }
+
+    function showPipelineDetail(tabKey, idx) {
+      const detailEl = document.getElementById(pipelineState[tabKey].detailId);
+      const step = PIPELINE_STEPS[tabKey][idx];
+      if (!step) {
+        detailEl.textContent = 'Hover or click a step to see what happens internally.';
+        return;
+      }
+      detailEl.textContent = `${idx + 1}. ${step.label} — ${step.desc}`;
+    }
+
+    function pipelineResetAll(tabKey) {
+      const state = pipelineState[tabKey];
+      state.currentIndex = -1;
+      if (state.replayTimer) {
+        clearInterval(state.replayTimer);
+        state.replayTimer = null;
+      }
+      const replayBar = document.getElementById(tabKey + 'ReplayBar');
+      if (replayBar) replayBar.style.display = 'none';
+      const replayPlayBtn = document.getElementById(tabKey + 'ReplayPlay');
+      if (replayPlayBtn) replayPlayBtn.textContent = '▶ Replay';
+      state.steps.forEach((el, i) => {
+        el.className = 'pipe-step pending';
+        el.querySelector('.pipe-num').textContent = i + 1;
+      });
+      showPipelineDetail(tabKey, -1);
+      focusComponentReset(tabKey);
+    }
+
+    function pipelineAdvance(tabKey, idx) {
+      const state = pipelineState[tabKey];
+      state.currentIndex = idx;
+      state.steps.forEach((el, i) => {
+        if (i < idx) {
+          el.className = 'pipe-step done';
+          el.querySelector('.pipe-num').textContent = '✓';
+        } else if (i === idx) {
+          el.className = 'pipe-step active';
+          el.querySelector('.pipe-num').textContent = i + 1;
+        } else {
+          el.className = 'pipe-step pending';
+          el.querySelector('.pipe-num').textContent = i + 1;
+        }
+      });
+      showPipelineDetail(tabKey, idx);
+      focusComponent(tabKey, idx);
+    }
+
+    function pipelineComplete(tabKey) {
+      const state = pipelineState[tabKey];
+      state.currentIndex = state.steps.length - 1;
+      state.steps.forEach(el => {
+        el.className = 'pipe-step done';
+        el.querySelector('.pipe-num').textContent = '✓';
+      });
+      showPipelineDetail(tabKey, state.currentIndex);
+      state.lastRun = { total: state.steps.length, errorIndex: null };
+      showReplayBar(tabKey);
+      focusComponentComplete(tabKey);
+    }
+
+    function pipelineError(tabKey, idx) {
+      const state = pipelineState[tabKey];
+      state.steps.forEach((el, i) => {
+        if (i < idx) {
+          el.className = 'pipe-step done';
+          el.querySelector('.pipe-num').textContent = '✓';
+        } else if (i === idx) {
+          el.className = 'pipe-step error';
+          el.querySelector('.pipe-num').textContent = '✕';
+        } else {
+          el.className = 'pipe-step pending';
+        }
+      });
+      showPipelineDetail(tabKey, idx);
+      state.lastRun = { total: state.steps.length, errorIndex: idx };
+      showReplayBar(tabKey);
+      focusComponentError(tabKey, idx);
+    }
+
+    // ---------- Pipeline Replay Controls ----------
+    // Lets the user step through the just-finished run's steps again with no
+    // network calls, using the same visual states (pending/active/done/error)
+    // that the live run produced. Driven by pipelineState[tabKey].lastRun,
+    // recorded by pipelineComplete/pipelineError above.
+
+    function showReplayBar(tabKey) {
+      const state = pipelineState[tabKey];
+      const lastRun = state.lastRun;
+      const bar = document.getElementById(tabKey + 'ReplayBar');
+      if (!bar || !lastRun) return;
+      if (state.replayTimer) {
+        clearInterval(state.replayTimer);
+        state.replayTimer = null;
+      }
+      const playBtn = document.getElementById(tabKey + 'ReplayPlay');
+      if (playBtn) playBtn.textContent = '▶ Replay';
+      bar.style.display = 'flex';
+      state.replayIndex = lastRun.errorIndex !== null ? lastRun.errorIndex : lastRun.total - 1;
+      updateReplayLabel(tabKey);
+      const prevBtn = document.getElementById(tabKey + 'ReplayPrev');
+      const nextBtn = document.getElementById(tabKey + 'ReplayNext');
+      if (prevBtn) prevBtn.disabled = state.replayIndex <= 0;
+      if (nextBtn) nextBtn.disabled = true;
+    }
+
+    function updateReplayLabel(tabKey) {
+      const state = pipelineState[tabKey];
+      const label = document.getElementById(tabKey + 'ReplayLabel');
+      if (label && state.lastRun) {
+        label.textContent = `Step ${state.replayIndex + 1}/${state.lastRun.total}`;
+      }
+    }
+
+    function pipelineReplaySetIndex(tabKey, idx) {
+      const state = pipelineState[tabKey];
+      const lastRun = state.lastRun;
+      if (!lastRun) return;
+
+      if (idx === lastRun.errorIndex) {
+        pipelineError(tabKey, idx);
+      } else {
+        pipelineAdvance(tabKey, idx);
+        if (idx === lastRun.total - 1 && lastRun.errorIndex === null) {
+          pipelineComplete(tabKey);
+        }
+      }
+
+      state.replayIndex = idx;
+      updateReplayLabel(tabKey);
+      const prevBtn = document.getElementById(tabKey + 'ReplayPrev');
+      const nextBtn = document.getElementById(tabKey + 'ReplayNext');
+      const replayCap = lastRun.errorIndex !== null ? lastRun.errorIndex : lastRun.total - 1;
+      if (prevBtn) prevBtn.disabled = idx <= 0;
+      if (nextBtn) nextBtn.disabled = idx >= replayCap;
+    }
+
+    function pipelineReplayStopTimer(tabKey) {
+      const state = pipelineState[tabKey];
+      if (state.replayTimer) {
+        clearInterval(state.replayTimer);
+        state.replayTimer = null;
+        const playBtn = document.getElementById(tabKey + 'ReplayPlay');
+        if (playBtn) playBtn.textContent = '▶ Replay';
+      }
+    }
+
+    function pipelineReplayPrev(tabKey) {
+      const state = pipelineState[tabKey];
+      if (!state.lastRun) return;
+      pipelineReplayStopTimer(tabKey);
+      const idx = Math.max(0, state.replayIndex - 1);
+      pipelineReplaySetIndex(tabKey, idx);
+    }
+
+    function pipelineReplayNext(tabKey) {
+      const state = pipelineState[tabKey];
+      if (!state.lastRun) return;
+      pipelineReplayStopTimer(tabKey);
+      const cap = state.lastRun.errorIndex !== null ? state.lastRun.errorIndex : state.lastRun.total - 1;
+      const idx = Math.min(cap, state.replayIndex + 1);
+      pipelineReplaySetIndex(tabKey, idx);
+    }
+
+    function pipelineReplayToggle(tabKey) {
+      const state = pipelineState[tabKey];
+      if (!state.lastRun) return;
+      const playBtn = document.getElementById(tabKey + 'ReplayPlay');
+
+      if (state.replayTimer) {
+        pipelineReplayStopTimer(tabKey);
+        return;
+      }
+
+      const cap = state.lastRun.errorIndex !== null ? state.lastRun.errorIndex : state.lastRun.total - 1;
+      let i = 0;
+      pipelineReplaySetIndex(tabKey, i);
+      if (playBtn) playBtn.textContent = '⏸ Pause';
+      state.replayTimer = setInterval(() => {
+        i += 1;
+        if (i > cap) {
+          pipelineReplayStopTimer(tabKey);
+          return;
+        }
+        pipelineReplaySetIndex(tabKey, i);
+      }, 1900);
+    }
+
+    function pipelineUpdateStepLabel(tabKey, idx, label) {
+      PIPELINE_STEPS[tabKey][idx].label = label;
+      pipelineState[tabKey].steps[idx].querySelector('.pipe-label').textContent = label;
+    }
+
+    // Timed pipeline run for request/response cycles without intermediate
+    // observable events (basic single, batch, vLLM batch). The timer only
+    // interpolates through intermediate steps; completion/error is always
+    // driven by the real fetch outcome.
+    function pipelineStart(tabKey) {
+      pipelineResetAll(tabKey);
+      pipelineAdvance(tabKey, 0);
+      const maxIdx = pipelineState[tabKey].steps.length - 1;
+      let idx = 0;
+      const timer = setInterval(() => {
+        if (idx < maxIdx - 1) {
+          idx += 1;
+          pipelineAdvance(tabKey, idx);
+        }
+      }, 350);
+      return { tabKey, timer };
+    }
+
+    function pipelineFinish(run) {
+      clearInterval(run.timer);
+      pipelineComplete(run.tabKey);
+    }
+
+    function pipelineFail(run) {
+      clearInterval(run.timer);
+      pipelineError(run.tabKey, pipelineState[run.tabKey].currentIndex);
+    }
+
+    let currentStreamSlot = null;
+
+    function pipelineStreamSlotFill() {
+      const slots = document.querySelectorAll('#streamPipelineSlots .pipe-slot');
+      slots.forEach(s => s.classList.remove('filled'));
+      const chosen = slots[Math.floor(Math.random() * slots.length)];
+      chosen.classList.add('filled');
+      currentStreamSlot = chosen;
+    }
+
+    function pipelineStreamSlotClear() {
+      document.querySelectorAll('#streamPipelineSlots .pipe-slot').forEach(s => s.classList.remove('filled'));
+      currentStreamSlot = null;
+    }
+
+    buildPipeline('basic', 'basicPipelineSteps', 'basicPipelineDetail');
+    buildPipeline('stream', 'streamPipelineSteps', 'streamPipelineDetail');
+    buildPipeline('batch', 'batchPipelineSteps', 'batchPipelineDetail');
+    buildPipeline('vllm', 'vllmPipelineSteps', 'vllmPipelineDetail');
+
+    // Streaming Logic
+    async function runStream() {
+      const prompt = document.getElementById('streamPrompt').value;
+      const btn = document.getElementById('btnStream');
+      const outputBox = document.getElementById('streamOutput');
+      const ttftEl = document.getElementById('streamTTFT');
+      const tokenCountEl = document.getElementById('streamTokenCount');
+      const tpsEl = document.getElementById('streamTPS');
+
+      btn.disabled = true;
+      outputBox.innerHTML = `<span class="prompt-text">${escapeHtml(prompt)}</span> `;
+      const cursor = document.createElement('span');
+      cursor.className = 'cursor';
+      outputBox.appendChild(cursor);
+
+      ttftEl.textContent = '-';
+      tokenCountEl.textContent = '0';
+      tpsEl.textContent = '-';
+
+      pipelineResetAll('stream');
+      pipelineStreamSlotClear();
+      pipelineAdvance('stream', 0);
+      let streamFirstChunk = true;
+      let streamFailed = false;
+
+      const startTime = performance.now();
+      let firstTokenTime = null;
+      let tokenCount = 0;
+
+      try {
+        const response = await fetch(`${API_BASE}/generate_stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt })
+        });
+
+        if (!response.ok) {
+          throw new Error(`Server returned HTTP ${response.status}`);
+        }
+
+        pipelineAdvance('stream', 1);
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder('utf-8');
+        let buffer = '';
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          if (streamFirstChunk) {
+            streamFirstChunk = false;
+            pipelineAdvance('stream', 2);
+            pipelineStreamSlotFill();
+          }
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop(); // keep last incomplete line
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith('data: ')) {
+              const rawData = trimmed.slice(6);
+              try {
+                const parsed = JSON.parse(rawData);
+                if (parsed.token) {
+                  if (!firstTokenTime) {
+                    firstTokenTime = performance.now();
+                    const ttft = Math.round(firstTokenTime - startTime);
+                    ttftEl.textContent = `${ttft} ms`;
+                    pipelineAdvance('stream', 3);
+                  }
+
+                  tokenCount++;
+                  tokenCountEl.textContent = tokenCount;
+                  if (tokenCount === 2) pipelineAdvance('stream', 4);
+                  if (tokenCount === 3) pipelineAdvance('stream', 5);
+
+                  const elapsedTimeSec = (performance.now() - firstTokenTime) / 1000;
+                  if (elapsedTimeSec > 0) {
+                    const tps = (tokenCount / elapsedTimeSec).toFixed(1);
+                    tpsEl.textContent = `${tps} t/s`;
+                  }
+
+                  // Insert token element before cursor
+                  const tokenSpan = document.createElement('span');
+                  tokenSpan.className = 'token';
+                  tokenSpan.textContent = parsed.token;
+                  outputBox.insertBefore(tokenSpan, cursor);
+                  outputBox.scrollTop = outputBox.scrollHeight;
+                }
+              } catch (e) {
+                console.error('JSON parse error in SSE stream', e);
+              }
+            }
+          }
+        }
+      } catch (err) {
+        streamFailed = true;
+        pipelineError('stream', pipelineState['stream'].currentIndex);
+        const errSpan = document.createElement('div');
+        errSpan.style.color = '#ef4444';
+        errSpan.style.marginTop = '0.5rem';
+        errSpan.textContent = `Error: ${err.message}`;
+        outputBox.appendChild(errSpan);
+      } finally {
+        cursor.remove();
+        btn.disabled = false;
+        if (!streamFailed) {
+          pipelineComplete('stream');
+        }
+        pipelineStreamSlotClear();
+      }
+    }
+
+    // Basic Single Generation Logic
+    async function runBasic() {
+      const prompt = document.getElementById('basicPrompt').value;
+      const btn = document.getElementById('btnBasic');
+      const outputBox = document.getElementById('basicOutput');
+      const latencyEl = document.getElementById('basicLatency');
+
+      btn.disabled = true;
+      outputBox.innerHTML = '<span class="prompt-text">Generating response...</span>';
+      latencyEl.textContent = '-';
+
+      const pipe = pipelineStart('basic');
+      const startTime = performance.now();
+      try {
+        const response = await fetch(`${API_BASE}/basic_generate`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt })
+        });
+
+        const elapsed = Math.round(performance.now() - startTime);
+        latencyEl.textContent = `${elapsed} ms`;
+
+        if (!response.ok) {
+          throw new Error(`Server returned HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        outputBox.innerHTML = `<span class="prompt-text">${escapeHtml(prompt)}</span>${escapeHtml(data.generated_text)}`;
+        pipelineFinish(pipe);
+      } catch (err) {
+        outputBox.innerHTML = `<span style="color:#ef4444">Error: ${escapeHtml(err.message)}</span>`;
+        pipelineFail(pipe);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    // Batch Generation (standard or vLLM)
+    async function runBatch(isVllm) {
+      const endpoint = isVllm ? '/generate_vllm' : '/generate';
+      const btnId = isVllm ? 'btnVllm' : 'btnBatch';
+      const inputClass = isVllm ? '.vllm-prompt-input' : '.batch-prompt-input';
+      const outputContainerId = isVllm ? 'vllmOutputList' : 'batchOutputList';
+      const latencyId = isVllm ? 'vllmLatency' : 'batchLatency';
+      const countId = isVllm ? 'vllmCount' : 'batchCount';
+
+      const inputs = Array.from(document.querySelectorAll(inputClass))
+        .map(input => input.value.trim())
+        .filter(val => val.length > 0);
+
+      if (inputs.length === 0) {
+        alert('Please enter at least one prompt for batch processing.');
+        return;
+      }
+
+      const btn = document.getElementById(btnId);
+      const outputContainer = document.getElementById(outputContainerId);
+      const latencyEl = document.getElementById(latencyId);
+      const countEl = document.getElementById(countId);
+
+      btn.disabled = true;
+      outputContainer.innerHTML = '<span class="prompt-text">Processing batch requests...</span>';
+      latencyEl.textContent = '-';
+      countEl.textContent = '-';
+
+      const pipeTabKey = isVllm ? 'vllm' : 'batch';
+      if (!isVllm) {
+        pipelineUpdateStepLabel('batch', 2, `배치 구성 (${inputs.length}개 중 최대 4개씩)`);
+        const note = document.getElementById('batchPipelineNote');
+        if (inputs.length > 4) {
+          note.style.display = 'block';
+          note.textContent = `${inputs.length}개 prompt는 배치 크기(4)를 초과해 여러 라운드에 걸쳐 처리됩니다.`;
+        } else {
+          note.style.display = 'none';
+        }
+      }
+      const pipe = pipelineStart(pipeTabKey);
+
+      const startTime = performance.now();
+      try {
+        const response = await fetch(`${API_BASE}${endpoint}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompts: inputs })
+        });
+
+        const elapsed = Math.round(performance.now() - startTime);
+        latencyEl.textContent = `${elapsed} ms`;
+        countEl.textContent = inputs.length;
+
+        if (!response.ok) {
+          throw new Error(`Server returned HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        outputContainer.innerHTML = '';
+
+        data.generated_texts.forEach((text, idx) => {
+          const card = document.createElement('div');
+          card.className = 'batch-card';
+          card.innerHTML = `
+            <div class="batch-card-prompt">Prompt #${idx + 1}: ${escapeHtml(inputs[idx])}</div>
+            <div class="batch-card-output">${escapeHtml(text)}</div>
+          `;
+          outputContainer.appendChild(card);
+        });
+
+        pipelineFinish(pipe);
+      } catch (err) {
+        outputContainer.innerHTML = `<span style="color:#ef4444">Error: ${escapeHtml(err.message)}</span>`;
+        pipelineFail(pipe);
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>

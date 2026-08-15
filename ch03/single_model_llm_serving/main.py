@@ -1,5 +1,7 @@
 from fastapi import FastAPI, BackgroundTasks, Depends
-from fastapi.responses import StreamingResponse
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from llm import LLMEngine
 from typing import List
@@ -7,9 +9,35 @@ import asyncio
 import multiprocessing
 import atexit
 import signal
+import os
 
 # Create FastAPI app
-app = FastAPI()
+app = FastAPI(title="LLM Serving API & Playground")
+
+# Enable CORS for frontend integration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Static files setup
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_dir):
+    app.mount("/static", StaticFiles(directory=static_dir), name="static")
+
+@app.get("/")
+async def serve_frontend():
+    index_path = os.path.join(static_dir, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path)
+    return {"message": "LLM Serving Backend is running. Frontend UI not found."}
+
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
 
 # Create LLM instance
 _llm = None
@@ -91,4 +119,6 @@ if __name__ == "__main__":
     
     # Initialize LLM before starting the server
     get_llm()
-    uvicorn.run(app, host="0.0.0.0", port=8000) 
+    port = int(os.environ.get("PORT", 8080))
+    print(f"Starting LLM Serving backend on http://localhost:{port}")
+    uvicorn.run(app, host="0.0.0.0", port=port) 

@@ -1,0 +1,1342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Multi-Model Serving Playground</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --border-color: #334155;
+      --primary-color: #3b82f6;
+      --primary-hover: #2563eb;
+      --accent-color: #10b981;
+      --accent-purple: #8b5cf6;
+      --accent-amber: #f59e0b;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --input-bg: #0f172a;
+      --code-font: 'JetBrains Mono', monospace;
+      --danger-color: #ef4444;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background-color: rgba(30, 41, 59, 0.8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      padding: 1rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .logo-badge {
+      background: linear-gradient(135deg, var(--primary-color), var(--accent-purple));
+      color: white;
+      font-weight: 700;
+      font-size: 0.85rem;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      letter-spacing: 0.05em;
+    }
+
+    .title {
+      font-size: 1.25rem;
+      font-weight: 600;
+    }
+
+    .server-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.875rem;
+      color: var(--text-muted);
+      background: #0f172a;
+      padding: 0.4rem 0.8rem;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: #ef4444;
+      display: inline-block;
+    }
+
+    .status-dot.online {
+      background-color: var(--accent-color);
+      box-shadow: 0 0 8px var(--accent-color);
+    }
+
+    main {
+      flex: 1;
+      max-width: 1200px;
+      width: 100%;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    .grid-layout {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (max-width: 900px) {
+      .grid-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.2rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .card-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .cache-status-container {
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+    }
+
+    .cache-header {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .model-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .tag-badge {
+      font-size: 0.8rem;
+      padding: 0.3rem 0.61rem;
+      border-radius: 6px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    .tag-loaded {
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--accent-color);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+
+    .tag-unloaded {
+      background: rgba(148, 163, 184, 0.1);
+      color: var(--text-muted);
+      border: 1px solid var(--border-color);
+    }
+
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    label {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-muted);
+    }
+
+    select, textarea, input[type="text"] {
+      width: 100%;
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-main);
+      padding: 0.8rem;
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    select:focus, textarea:focus, input[type="text"]:focus {
+      border-color: var(--primary-color);
+    }
+
+    .model-info-box {
+      background: var(--input-bg);
+      border: 1px dashed var(--border-color);
+      border-radius: 8px;
+      padding: 0.8rem 1rem;
+      font-size: 0.85rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+    }
+
+    .info-row {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .info-label {
+      color: var(--text-muted);
+    }
+
+    .info-val {
+      font-family: var(--code-font);
+      font-weight: 500;
+      color: var(--accent-purple);
+    }
+
+    .preset-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .preset-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .preset-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+      border-color: var(--primary-color);
+    }
+
+    .btn-action {
+      background: var(--primary-color);
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn-action:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-action:active {
+      transform: scale(0.98);
+    }
+
+    .btn-action:disabled {
+      background: var(--border-color);
+      cursor: not-allowed;
+      opacity: 0.6;
+    }
+
+    .metrics-bar {
+      display: flex;
+      gap: 1rem;
+      padding: 0.75rem;
+      background: var(--input-bg);
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    .metric-item {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+    }
+
+    .metric-label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .metric-value {
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: var(--code-font);
+      color: var(--accent-color);
+    }
+
+    .output-box {
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1rem;
+      min-height: 220px;
+      max-height: 400px;
+      overflow-y: auto;
+      font-family: var(--code-font);
+      font-size: 0.9rem;
+      line-height: 1.5;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    .meaning-box {
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 1rem;
+    }
+
+    .meaning-result {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .meaning-label-big {
+      font-size: 1.8rem;
+      font-weight: 700;
+      line-height: 1.3;
+    }
+
+    .meaning-confidence {
+      font-size: 0.95rem;
+      color: var(--text-muted);
+      margin-top: 0.1rem;
+    }
+
+    .prob-split {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+
+    .prob-split-row {
+      display: grid;
+      grid-template-columns: 90px 1fr 55px;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.85rem;
+    }
+
+    .prob-split-name {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .prob-split-pct {
+      font-family: var(--code-font);
+      text-align: right;
+    }
+
+    .prob-bar-track, .rank-bar-track {
+      background: var(--bg-color);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      height: 10px;
+      overflow: hidden;
+    }
+
+    .prob-bar-fill, .rank-bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 0.4s ease;
+    }
+
+    .rank-bar-fill {
+      background: var(--primary-color);
+    }
+
+    .rank-row {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      padding: 0.5rem 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .rank-row:last-child {
+      border-bottom: none;
+    }
+
+    .rank-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.9rem;
+    }
+
+    .rank-num {
+      color: var(--text-muted);
+      font-family: var(--code-font);
+      width: 1.5rem;
+    }
+
+    .rank-label {
+      flex: 1;
+      font-weight: 500;
+    }
+
+    .rank-pct {
+      font-family: var(--code-font);
+      color: var(--accent-purple);
+    }
+
+    .meaning-note {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .pipeline-container {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: stretch;
+      gap: 0.4rem;
+      overflow-x: auto;
+      padding-bottom: 0.4rem;
+    }
+
+    .pipeline-step {
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.75rem 0.9rem;
+      min-width: 150px;
+      max-width: 190px;
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      transition: border-color 0.3s, background 0.3s;
+    }
+
+    .pipeline-step .step-title {
+      font-size: 0.82rem;
+      font-weight: 600;
+      font-family: var(--code-font);
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .pipeline-step .step-subtitle {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.35;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+    }
+
+    .step-pending {
+      opacity: 0.5;
+    }
+
+    .step-active {
+      border-color: var(--primary-color);
+      background: rgba(59, 130, 246, 0.1);
+      opacity: 1;
+      animation: pipeline-pulse 1.2s infinite;
+    }
+
+    .step-done {
+      border-color: var(--accent-color);
+      background: rgba(16, 185, 129, 0.08);
+      opacity: 1;
+    }
+
+    .step-done .step-title {
+      color: var(--accent-color);
+    }
+
+    .step-error {
+      border-color: var(--danger-color);
+      background: rgba(239, 68, 68, 0.1);
+      opacity: 1;
+    }
+
+    .step-error .step-title {
+      color: var(--danger-color);
+    }
+
+    .pipeline-arrow {
+      display: flex;
+      align-items: center;
+      color: var(--border-color);
+      font-size: 1.1rem;
+      transition: color 0.3s;
+    }
+
+    .pipeline-arrow.arrow-active {
+      color: var(--accent-color);
+    }
+
+    .component-diagram {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      margin-top: 0.8rem;
+    }
+    .diagram-box {
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 0.55rem 0.85rem;
+      background: var(--input-bg);
+      transition: all 0.25s ease;
+    }
+    .diagram-box-label { font-weight: 600; font-size: 0.85rem; }
+    .diagram-box-caption { font-size: 0.72rem; color: var(--text-muted); min-height: 1.1em; margin-top: 0.15rem; }
+    .diagram-box.focus {
+      border-color: var(--primary-color);
+      background: rgba(59, 130, 246, 0.15);
+      box-shadow: 0 0 10px var(--primary-color);
+    }
+    .diagram-box.done { border-color: var(--accent-color); }
+    .diagram-box.error { border-color: var(--danger-color); background: rgba(239, 68, 68, 0.12); }
+    .diagram-arrow-vert { text-align: center; color: var(--text-muted); font-size: 0.85rem; line-height: 1; }
+
+    .replay-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.6rem;
+      padding-top: 0.6rem;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .replay-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: var(--text-muted);
+      padding: 0.35rem 0.75rem;
+      font-size: 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+
+    .replay-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text-main);
+      border-color: var(--primary-color);
+    }
+
+    .replay-btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .replay-label {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      font-family: var(--code-font);
+      margin-left: auto;
+    }
+
+    @keyframes pipeline-pulse {
+      0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.45); }
+      70% { box-shadow: 0 0 0 8px rgba(59, 130, 246, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+    }
+
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      border-top: 1px solid var(--border-color);
+      margin-top: auto;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="logo-container">
+      <span class="logo-badge">LRU Cache</span>
+      <span class="title">Multi-Model Serving Playground</span>
+    </div>
+    <div class="server-status">
+      <span class="status-dot" id="statusDot"></span>
+      <span id="statusText">Checking Server...</span>
+    </div>
+  </header>
+
+  <main>
+    <!-- LRU CACHE STATUS BAR -->
+    <div class="cache-status-container">
+      <div class="cache-header">
+        <span id="cacheHeaderTitle">Model Store & LRU Cache Monitor (Max Capacity: 2)</span>
+        <div style="display: flex; align-items: center; gap: 0.5rem;">
+          <label for="maxCapacitySelect" style="font-size: 0.8rem; color: var(--text-muted);">Max Capacity:</label>
+          <select id="maxCapacitySelect" onchange="updateMaxCapacity()" style="width: auto; padding: 0.35rem 0.5rem;">
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+            <option value="5">5</option>
+          </select>
+          <button class="preset-btn" onclick="clearCache()">🗑️ Clear Cache</button>
+          <button class="preset-btn" onclick="fetchModels()">🔄 Refresh Status</button>
+        </div>
+      </div>
+      <div>
+        <span style="font-size: 0.8rem; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">Currently Loaded Models (LRU):</span>
+        <div id="loadedModelsList" class="model-tags">
+          <span class="tag-badge tag-unloaded">Loading cache info...</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid-layout">
+      <!-- INPUT CARD -->
+      <div class="card">
+        <div class="card-title">
+          <span>1. Select Model & Input</span>
+        </div>
+
+        <div class="input-group">
+          <label for="modelSelect">Target Model:</label>
+          <select id="modelSelect" onchange="onModelChange()">
+            <option value="">Loading available models...</option>
+          </select>
+        </div>
+
+        <div id="modelDetails" class="model-info-box">
+          <div class="info-row">
+            <span class="info-label">Framework:</span>
+            <span id="infoFramework" class="info-val">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Type:</span>
+            <span id="infoType" class="info-val">-</span>
+          </div>
+          <div class="info-row">
+            <span class="info-label">Description:</span>
+            <span id="infoDesc" class="info-val" style="color: var(--text-main); font-family: inherit;">-</span>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label>Quick Preset Inputs:</label>
+          <div id="presetContainer" class="preset-container">
+            <!-- Preset buttons injected dynamically -->
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label for="inputData">Input Data:</label>
+          <textarea id="inputData" rows="4" placeholder="Enter text or image input path...">This movie was great!</textarea>
+        </div>
+
+        <button id="btnPredict" class="btn-action" onclick="runPredict()">
+          <span>Run Prediction (/predict)</span>
+        </button>
+      </div>
+
+      <!-- OUTPUT CARD -->
+      <div class="card">
+        <div class="card-title">
+          <span>2. Prediction Results</span>
+        </div>
+
+        <div class="metrics-bar">
+          <div class="metric-item">
+            <span class="metric-label">Latency</span>
+            <span class="metric-value" id="predictLatency">-</span>
+          </div>
+          <div class="metric-item">
+            <span class="metric-label">Status</span>
+            <span class="metric-value" id="predictStatus" style="color: var(--accent-color);">-</span>
+          </div>
+        </div>
+
+        <div id="outputBox" class="output-box">
+          <span style="color: var(--text-muted);">Prediction output will be displayed here as JSON...</span>
+        </div>
+
+        <div class="card-title" style="font-size: 0.95rem; margin-top: 0.4rem;">
+          <span>Prediction Meaning</span>
+        </div>
+        <div id="meaningBox" class="meaning-box">
+          <span style="color: var(--text-muted);">Run a prediction to see the decoded meaning here...</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- REQUEST PIPELINE VISUALIZATION -->
+    <div class="card">
+      <div class="card-title">
+        <span>Request Pipeline</span>
+      </div>
+      <div id="pipelineDiagram" class="pipeline-container">
+        <span style="color: var(--text-muted); font-size: 0.85rem;">Run a prediction to see the request flow...</span>
+      </div>
+      <div class="component-diagram" id="pipelineComponentDiagram">
+        <div class="diagram-box" data-component="api"><div class="diagram-box-label">🌐 API Server</div><div class="diagram-box-caption"></div></div>
+        <div class="diagram-arrow-vert">↓</div>
+        <div class="diagram-box" data-component="manager"><div class="diagram-box-label">🗂️ Model Manager</div><div class="diagram-box-caption"></div></div>
+        <div class="diagram-arrow-vert">↓</div>
+        <div class="diagram-box" data-component="store"><div class="diagram-box-label">📦 Model Store</div><div class="diagram-box-caption"></div></div>
+        <div class="diagram-arrow-vert">↓</div>
+        <div class="diagram-box" data-component="cache"><div class="diagram-box-label">💾 Model Cache (LRU)</div><div class="diagram-box-caption"></div></div>
+        <div class="diagram-arrow-vert">↓</div>
+        <div class="diagram-box" data-component="engine"><div class="diagram-box-label">🏭 Model Engine</div><div class="diagram-box-caption"></div></div>
+        <div class="diagram-arrow-vert">↓</div>
+        <div class="diagram-box" data-component="worker"><div class="diagram-box-label">⚙️ Transformer Worker</div><div class="diagram-box-caption"></div></div>
+      </div>
+      <div class="replay-bar" id="pipelineReplayBar" style="display:none;">
+        <button class="replay-btn" id="pipelineReplayPrev" onclick="pipelineReplayPrev()">⏮</button>
+        <button class="replay-btn" id="pipelineReplayPlay" onclick="pipelineReplayToggle()">▶ Replay</button>
+        <button class="replay-btn" id="pipelineReplayNext" onclick="pipelineReplayNext()">Next ⏭</button>
+        <span class="replay-label" id="pipelineReplayLabel">Step 1/6</span>
+      </div>
+    </div>
+  </main>
+
+  <footer>
+    Multi-Model Serving Practice • On-Demand Loading & LRU Model Caching
+  </footer>
+
+  <script>
+    const API_BASE = window.location.origin;
+    let availableModels = [];
+    let lastLoadedModels = {};
+    let imagenetLabelsPromise = null;
+    let currentMaxCapacity = 2;
+
+    const TWO_CLASS_MODELS = {
+      "550e8400-e29b-41d4-a716-446655440000": { labels: ["NEGATIVE", "POSITIVE"], dangerLabel: "NEGATIVE" },
+      "6ba7b810-9dad-11d1-80b4-00c04fd430c8": { labels: ["HAM", "SPAM"], dangerLabel: "SPAM" }
+    };
+
+    const IMAGE_MODELS = {
+      "7c9e6679-7425-40de-944b-e07fc1f90ae7": "predictions",
+      "8ba7b810-9dad-11d1-80b4-00c04fd430c9": "fc6_1"
+    };
+
+    const PRESETS = {
+      "550e8400-e29b-41d4-a716-446655440000": [
+        "This movie was fantastic and emotional!",
+        "Terrible experience, completely disappointed.",
+        "The food was okay, but service was slow."
+      ],
+      "6ba7b810-9dad-11d1-80b4-00c04fd430c8": [
+        "Win a free iPhone now! Click here to claim your prize.",
+        "Hey, are we still meeting for lunch today at 1pm?",
+        "URGENT: Your account password needs update immediately."
+      ],
+      "7c9e6679-7425-40de-944b-e07fc1f90ae7": [
+        "tests/images/cat1.jpg",
+        "sample_image.png"
+      ],
+      "8ba7b810-9dad-11d1-80b4-00c04fd430c9": [
+        "tests/images/cat1.jpg"
+      ]
+    };
+
+    async function checkHealth() {
+      const statusDot = document.getElementById('statusDot');
+      const statusText = document.getElementById('statusText');
+      try {
+        const startTime = performance.now();
+        const res = await fetch(`${API_BASE}/health`);
+        const elapsed = Math.round(performance.now() - startTime);
+        if (res.ok) {
+          statusDot.classList.add('online');
+          statusText.textContent = `Online (${elapsed} ms)`;
+        } else {
+          statusDot.classList.remove('online');
+          statusText.textContent = 'Server Error';
+        }
+      } catch (err) {
+        statusDot.classList.remove('online');
+        statusText.textContent = 'Backend Offline';
+      }
+    }
+
+    async function fetchModels() {
+      try {
+        const res = await fetch(`${API_BASE}/models`);
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        const rawAvailable = data.available_models || {};
+        availableModels = Array.isArray(rawAvailable) ? rawAvailable : Object.values(rawAvailable);
+
+        const rawLoaded = data.loaded_models || {};
+        const loadedList = Array.isArray(rawLoaded) 
+          ? rawLoaded 
+          : Object.entries(rawLoaded).map(([id, val]) => {
+              const name = (typeof val === 'object' && val !== null) ? (val.name || id) : val;
+              return { id, name };
+            });
+
+        lastLoadedModels = {};
+        loadedList.forEach(m => { lastLoadedModels[m.id] = m.name; });
+
+        if (typeof data.max_capacity === 'number') {
+          currentMaxCapacity = data.max_capacity;
+          const headerTitle = document.getElementById('cacheHeaderTitle');
+          if (headerTitle) headerTitle.textContent = `Model Store & LRU Cache Monitor (Max Capacity: ${currentMaxCapacity})`;
+          const capacitySelect = document.getElementById('maxCapacitySelect');
+          if (capacitySelect && document.activeElement !== capacitySelect) {
+            capacitySelect.value = String(currentMaxCapacity);
+          }
+        }
+
+        // Render Loaded Models Badges
+        const loadedContainer = document.getElementById('loadedModelsList');
+        if (loadedList.length === 0) {
+          loadedContainer.innerHTML = '<span class="tag-badge tag-unloaded">No models currently loaded in memory</span>';
+        } else {
+          loadedContainer.innerHTML = loadedList.map(m => `
+            <span class="tag-badge tag-loaded">⚡ ${escapeHtml(m.name)}</span>
+          `).join('');
+        }
+
+        // Render Model Select Options
+        const select = document.getElementById('modelSelect');
+        const currentSelected = select.value;
+        if (availableModels.length === 0) {
+          select.innerHTML = '<option value="">No models available</option>';
+        } else {
+          select.innerHTML = availableModels.map(m => `
+            <option value="${m.id}">${m.name} (${m.type} - ${m.framework})</option>
+          `).join('');
+        }
+
+        if (currentSelected && availableModels.some(m => m.id === currentSelected)) {
+          select.value = currentSelected;
+        }
+
+        onModelChange();
+      } catch (err) {
+        console.error("Failed to fetch models:", err);
+      }
+    }
+
+    async function clearCache() {
+      try {
+        const res = await fetch(`${API_BASE}/cache/clear`, { method: 'POST' });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        await fetchModels();
+      } catch (err) {
+        console.error("Failed to clear cache:", err);
+      }
+    }
+
+    async function updateMaxCapacity() {
+      const select = document.getElementById('maxCapacitySelect');
+      const value = parseInt(select.value, 10);
+      try {
+        const res = await fetch(`${API_BASE}/cache/capacity`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ max_capacity: value })
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        await fetchModels();
+      } catch (err) {
+        console.error("Failed to update max capacity:", err);
+      }
+    }
+
+    function onModelChange() {
+      const select = document.getElementById('modelSelect');
+      const selectedId = select.value;
+      const model = availableModels.find(m => m.id === selectedId);
+
+      if (!model) return;
+
+      document.getElementById('infoFramework').textContent = model.framework;
+      document.getElementById('infoType').textContent = model.type;
+      document.getElementById('infoDesc').textContent = model.description || '-';
+
+      // Update Presets
+      const presetContainer = document.getElementById('presetContainer');
+      const presets = PRESETS[selectedId] || ["Sample input test"];
+      presetContainer.innerHTML = presets.map((p, idx) => `
+        <button class="preset-btn" onclick="setInput('${escapeHtml(p)}')">Preset #${idx+1}</button>
+      `).join('');
+
+      if (presets.length > 0) {
+        document.getElementById('inputData').value = presets[0];
+      }
+    }
+
+    function setInput(text) {
+      document.getElementById('inputData').value = text;
+    }
+
+    async function runPredict() {
+      const modelId = document.getElementById('modelSelect').value;
+      const inputData = document.getElementById('inputData').value;
+      const btn = document.getElementById('btnPredict');
+      const outputBox = document.getElementById('outputBox');
+      const latencyEl = document.getElementById('predictLatency');
+      const statusEl = document.getElementById('predictStatus');
+
+      if (!modelId) {
+        alert("Please select a model.");
+        return;
+      }
+
+      btn.disabled = true;
+      outputBox.innerHTML = '<span style="color: var(--text-muted);">Processing prediction request...</span>';
+      latencyEl.textContent = '-';
+      statusEl.textContent = 'Processing';
+      statusEl.style.color = 'var(--accent-amber)';
+
+      const selectedModel = availableModels.find(m => m.id === modelId);
+      document.getElementById('meaningBox').innerHTML = '<span style="color: var(--text-muted);">분석 중...</span>';
+      startPipelineAnimation(modelId, selectedModel ? selectedModel.name : modelId);
+
+      const startTime = performance.now();
+      try {
+        const response = await fetch(`${API_BASE}/predict`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            model_id: modelId,
+            input_data: inputData
+          })
+        });
+
+        const elapsed = Math.round(performance.now() - startTime);
+        latencyEl.textContent = `${elapsed} ms`;
+
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({ detail: response.statusText }));
+          throw new Error(errData.detail || `Server returned HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        statusEl.textContent = 'Success (200)';
+        statusEl.style.color = 'var(--accent-color)';
+
+        outputBox.innerHTML = escapeHtml(JSON.stringify(data, null, 2));
+        finishPipelineAnimation(true);
+        renderPredictionMeaning(modelId, data);
+
+        // Refresh cache monitor after prediction
+        await fetchModels();
+
+      } catch (err) {
+        finishPipelineAnimation(false);
+        document.getElementById('meaningBox').innerHTML = '<span class="meaning-note">요청이 실패하여 표시할 결과가 없습니다.</span>';
+        statusEl.textContent = 'Error';
+        statusEl.style.color = '#ef4444';
+        outputBox.innerHTML = `<span style="color:#ef4444">Error: ${escapeHtml(err.message)}</span>`;
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+
+    // ---- Prediction Meaning ----
+
+    async function getImagenetLabels() {
+      if (!imagenetLabelsPromise) {
+        imagenetLabelsPromise = fetch(`${API_BASE}/static/imagenet_labels.json`)
+          .then(res => res.ok ? res.json() : Promise.reject(new Error('Failed to load imagenet labels')))
+          .catch(err => {
+            console.error(err);
+            imagenetLabelsPromise = null;
+            return null;
+          });
+      }
+      return imagenetLabelsPromise;
+    }
+
+    function maybeSoftmax(scores) {
+      const sum = scores.reduce((a, b) => a + b, 0);
+      if (sum >= 0.9 && sum <= 1.1) return scores;
+      const max = Math.max(...scores);
+      const exps = scores.map(x => Math.exp(x - max));
+      const expSum = exps.reduce((a, b) => a + b, 0);
+      return exps.map(x => x / expSum);
+    }
+
+    function topK(scores, k) {
+      return scores
+        .map((v, idx) => ({ idx, v }))
+        .sort((a, b) => b.v - a.v)
+        .slice(0, k);
+    }
+
+    function extractImageScores(modelId, data) {
+      const key = IMAGE_MODELS[modelId];
+      if (!key) return null;
+      const raw = data[key];
+      if (!Array.isArray(raw)) return null;
+      return Array.isArray(raw[0]) ? raw[0] : raw;
+    }
+
+    function renderTwoClassMeaning(container, cfg, probs) {
+      const [p0, p1] = probs;
+      const winnerIdx = p1 > p0 ? 1 : 0;
+      const winnerLabel = cfg.labels[winnerIdx];
+      const winnerColor = winnerLabel === cfg.dangerLabel ? 'var(--danger-color)' : 'var(--accent-color)';
+      const rowColor = (label) => label === cfg.dangerLabel ? 'var(--danger-color)' : 'var(--accent-color)';
+
+      container.innerHTML = `
+        <div class="meaning-result">
+          <div>
+            <div class="meaning-label-big" style="color:${winnerColor}">${escapeHtml(winnerLabel)}</div>
+            <div class="meaning-confidence">${(probs[winnerIdx] * 100).toFixed(1)}% confidence</div>
+          </div>
+          <div class="prob-split">
+            <div class="prob-split-row">
+              <span class="prob-split-name">${escapeHtml(cfg.labels[0])}</span>
+              <div class="prob-bar-track"><div class="prob-bar-fill" style="width:${(p0 * 100).toFixed(1)}%; background:${rowColor(cfg.labels[0])}"></div></div>
+              <span class="prob-split-pct">${(p0 * 100).toFixed(1)}%</span>
+            </div>
+            <div class="prob-split-row">
+              <span class="prob-split-name">${escapeHtml(cfg.labels[1])}</span>
+              <div class="prob-bar-track"><div class="prob-bar-fill" style="width:${(p1 * 100).toFixed(1)}%; background:${rowColor(cfg.labels[1])}"></div></div>
+              <span class="prob-split-pct">${(p1 * 100).toFixed(1)}%</span>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function renderTopKMeaning(container, scores, labels) {
+      const top = topK(scores, 5);
+      const rows = top.map((item, rank) => {
+        const label = labels[item.idx] || `CLASS_${item.idx}`;
+        const pct = (item.v * 100).toFixed(1);
+        return `
+          <div class="rank-row">
+            <div class="rank-header">
+              <span class="rank-num">#${rank + 1}</span>
+              <span class="rank-label">${escapeHtml(label)}</span>
+              <span class="rank-pct">${pct}%</span>
+            </div>
+            <div class="rank-bar-track"><div class="rank-bar-fill" style="width:${pct}%"></div></div>
+          </div>`;
+      }).join('');
+      container.innerHTML = `<div class="meaning-result">${rows}</div>`;
+    }
+
+    function renderFallbackNote(container) {
+      container.innerHTML = '<span class="meaning-note">결과 형식을 해석할 수 없어 원본 JSON만 표시합니다.</span>';
+    }
+
+    async function renderPredictionMeaning(modelId, data) {
+      const container = document.getElementById('meaningBox');
+      if (!container) return;
+
+      try {
+        const twoClassCfg = TWO_CLASS_MODELS[modelId];
+        if (twoClassCfg && Array.isArray(data.predictions) && Array.isArray(data.predictions[0]) && data.predictions[0].length === 2) {
+          renderTwoClassMeaning(container, twoClassCfg, data.predictions[0]);
+          return;
+        }
+
+        const rawScores = extractImageScores(modelId, data);
+        if (rawScores && rawScores.length > 0) {
+          const labels = await getImagenetLabels();
+          if (!labels) {
+            renderFallbackNote(container);
+            return;
+          }
+          renderTopKMeaning(container, maybeSoftmax(rawScores), labels);
+          return;
+        }
+
+        renderFallbackNote(container);
+      } catch (err) {
+        console.error("Failed to render prediction meaning:", err);
+        renderFallbackNote(container);
+      }
+    }
+
+    // ---- Request Pipeline Visualization ----
+
+    let pipelineSteps = [];
+    let pipelineStates = [];
+    let pipelineIntervalId = null;
+    let lastRun = null;
+    let replayIndex = 0;
+    let replayTimerId = null;
+
+    function buildPipelineSteps(modelId, modelName, isHit) {
+      const steps = [
+        { title: 'Client Request', subtitle: `${modelName} 예측 요청 전송`, component: 'api' },
+        { title: 'ModelManager.get_model_worker()', subtitle: '캐시에 model_id가 있는지 확인', component: 'manager' }
+      ];
+
+      if (isHit) {
+        steps.push({ title: 'Cache Hit ✓ — move_to_end()', subtitle: '이미 메모리에 로드된 모델, 캐시 순서만 최신으로 갱신하고 바로 재사용', component: 'cache' });
+      } else {
+        steps.push({ title: 'Cache Miss — ModelStore 조회', subtitle: 'config/models.json에서 이 모델의 메타데이터(framework, name 등) 조회', component: 'store' });
+        const willEvict = Object.keys(lastLoadedModels).length >= currentMaxCapacity;
+        steps.push({
+          title: `LRU 캐시 용량 확인 (max ${currentMaxCapacity})`,
+          subtitle: willEvict
+            ? '가장 오래 사용되지 않은 모델을 제거(LRU eviction)해 자리를 만듭니다'
+            : '여유 슬롯 있음, 바로 새 모델 로드 진행',
+          component: 'cache'
+        });
+        steps.push({ title: 'ModelEngine.create_worker()', subtitle: 'framework(transformers/torchvision/triton)에 맞는 Worker 인스턴스 생성 및 모델 로드 (첫 로드라 시간이 더 걸릴 수 있음)', component: 'engine' });
+      }
+
+      steps.push({ title: 'worker.predict(input_data)', subtitle: '실제 추론 실행', component: 'worker' });
+      steps.push({ title: 'Response → Client', subtitle: '응답 수신', component: 'api' });
+      return steps;
+    }
+
+    function renderPipeline() {
+      const container = document.getElementById('pipelineDiagram');
+      if (!container) return;
+      container.innerHTML = pipelineSteps.map((step, i) => {
+        const state = pipelineStates[i];
+        const arrowActive = i > 0 && pipelineStates[i - 1] !== 'pending';
+        const arrow = i > 0 ? `<div class="pipeline-arrow ${arrowActive ? 'arrow-active' : ''}">→</div>` : '';
+        const icon = state === 'done' ? '✓ ' : (state === 'error' ? '✕ ' : '');
+        return `${arrow}<div class="pipeline-step step-${state}">
+          <div class="step-title">${icon}${escapeHtml(step.title)}</div>
+          <div class="step-subtitle">${escapeHtml(step.subtitle)}</div>
+        </div>`;
+      }).join('');
+      updateComponentDiagram();
+    }
+
+    const DIAGRAM_COMPONENTS_MULTI = ['api', 'manager', 'store', 'cache', 'engine', 'worker'];
+
+    function updateComponentDiagram() {
+      const diagram = document.getElementById('pipelineComponentDiagram');
+      if (!diagram) return;
+      const visited = new Set();
+      let currentKey = null;
+      let currentState = null;
+      let currentLabel = '';
+      pipelineSteps.forEach((step, i) => {
+        const state = pipelineStates[i];
+        if (state === 'active' || state === 'error') {
+          currentKey = step.component;
+          currentState = state;
+          currentLabel = step.title;
+        } else if (state === 'done' && step.component !== currentKey) {
+          visited.add(step.component);
+        }
+      });
+      DIAGRAM_COMPONENTS_MULTI.forEach(key => {
+        const box = diagram.querySelector(`[data-component="${key}"]`);
+        if (!box) return;
+        box.classList.remove('focus', 'done', 'error');
+        const cap = box.querySelector('.diagram-box-caption');
+        if (key === currentKey) {
+          box.classList.add(currentState === 'error' ? 'error' : 'focus');
+          if (cap) cap.textContent = currentLabel;
+        } else if (visited.has(key)) {
+          box.classList.add('done');
+          if (cap) cap.textContent = '';
+        } else if (cap) {
+          cap.textContent = '';
+        }
+      });
+    }
+
+    function startPipelineAnimation(modelId, modelName) {
+      if (pipelineIntervalId) {
+        clearInterval(pipelineIntervalId);
+        pipelineIntervalId = null;
+      }
+      if (replayTimerId) {
+        clearInterval(replayTimerId);
+        replayTimerId = null;
+      }
+      resetReplayPlayButton();
+      const replayBar = document.getElementById('pipelineReplayBar');
+      if (replayBar) replayBar.style.display = 'none';
+
+      const isHit = Object.prototype.hasOwnProperty.call(lastLoadedModels, modelId);
+      pipelineSteps = buildPipelineSteps(modelId, modelName, isHit);
+      pipelineStates = pipelineSteps.map(() => 'pending');
+      pipelineStates[0] = 'active';
+      renderPipeline();
+
+      let idx = 0;
+      pipelineIntervalId = setInterval(() => {
+        if (idx >= pipelineStates.length - 1) {
+          clearInterval(pipelineIntervalId);
+          pipelineIntervalId = null;
+          return;
+        }
+        pipelineStates[idx] = 'done';
+        idx++;
+        pipelineStates[idx] = 'active';
+        renderPipeline();
+      }, 350);
+    }
+
+    function finishPipelineAnimation(success) {
+      if (pipelineIntervalId) {
+        clearInterval(pipelineIntervalId);
+        pipelineIntervalId = null;
+      }
+      if (!pipelineStates.length) return;
+
+      const lastIdx = pipelineStates.length - 1;
+      for (let i = 0; i < lastIdx; i++) {
+        if (pipelineStates[i] !== 'error') pipelineStates[i] = 'done';
+      }
+      pipelineStates[lastIdx] = success ? 'done' : 'error';
+      renderPipeline();
+
+      lastRun = {
+        steps: pipelineSteps.slice(),
+        total: pipelineStates.length,
+        errorIndex: success ? null : pipelineStates.length - 1
+      };
+      showReplayBar();
+    }
+
+    // ---- Pipeline Replay ----
+
+    function resetReplayPlayButton() {
+      const btn = document.getElementById('pipelineReplayPlay');
+      if (btn) btn.textContent = '▶ Replay';
+    }
+
+    function showReplayBar() {
+      if (!lastRun) return;
+      const bar = document.getElementById('pipelineReplayBar');
+      if (bar) bar.style.display = 'flex';
+      pipelineReplaySetIndex(lastRun.total - 1);
+    }
+
+    function pipelineReplaySetIndex(idx) {
+      if (!lastRun) return;
+      const total = lastRun.total;
+      const allDone = idx === total - 1 && lastRun.errorIndex === null;
+
+      pipelineSteps = lastRun.steps;
+      pipelineStates = lastRun.steps.map((_, i) => {
+        if (allDone) return 'done';
+        if (i < idx) return 'done';
+        if (i === idx) return idx === lastRun.errorIndex ? 'error' : 'active';
+        return 'pending';
+      });
+      renderPipeline();
+      replayIndex = idx;
+
+      const label = document.getElementById('pipelineReplayLabel');
+      if (label) label.textContent = `Step ${idx + 1}/${total}`;
+
+      const prevBtn = document.getElementById('pipelineReplayPrev');
+      const nextBtn = document.getElementById('pipelineReplayNext');
+      if (prevBtn) prevBtn.disabled = idx <= 0;
+      if (nextBtn) nextBtn.disabled = idx >= total - 1;
+    }
+
+    function stopReplayPlayback() {
+      if (replayTimerId) {
+        clearInterval(replayTimerId);
+        replayTimerId = null;
+        resetReplayPlayButton();
+      }
+    }
+
+    function pipelineReplayPrev() {
+      if (!lastRun) return;
+      stopReplayPlayback();
+      pipelineReplaySetIndex(Math.max(0, replayIndex - 1));
+    }
+
+    function pipelineReplayNext() {
+      if (!lastRun) return;
+      stopReplayPlayback();
+      pipelineReplaySetIndex(Math.min(lastRun.total - 1, replayIndex + 1));
+    }
+
+    function pipelineReplayToggle() {
+      if (!lastRun) return;
+      const btn = document.getElementById('pipelineReplayPlay');
+
+      if (replayTimerId) {
+        stopReplayPlayback();
+        return;
+      }
+
+      pipelineReplaySetIndex(0);
+      if (btn) btn.textContent = '⏸ Pause';
+      replayTimerId = setInterval(() => {
+        if (replayIndex >= lastRun.total - 1) {
+          stopReplayPlayback();
+          return;
+        }
+        pipelineReplaySetIndex(replayIndex + 1);
+      }, 1900);
+    }
+
+    // Init
+    checkHealth();
+    fetchModels();
+    setInterval(checkHealth, 10000);
+  </script>
+</body>
+</html>

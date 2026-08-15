@@ -27,10 +27,12 @@ echo "Starting web service..."
 cd "$PROJECT_ROOT" && python main.py &
 SERVER_PID=$!
 
+PORT="${PORT:-8080}"
+
 # Wait for the server to start
 echo "Waiting for server to start..."
 for i in {1..30}; do
-    if curl -s http://localhost:8000 > /dev/null; then
+    if curl -s http://localhost:${PORT} > /dev/null; then
         echo "Server is up!"
         break
     fi
@@ -47,7 +49,7 @@ echo "Sending streaming request..."
 curl -N -H "Accept: text/event-stream" \
      -H "Content-Type: application/json" \
      -d '{"prompt": "Hello, I am"}' \
-     http://localhost:8000/generate_stream | while read -r line; do
+     http://localhost:${PORT}/generate_stream | while read -r line; do
     if [[ $line == data:* ]]; then
         # Extract and print the token
         token=$(echo $line | sed 's/^data: //' | jq -r '.token')

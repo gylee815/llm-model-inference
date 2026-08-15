@@ -1,12 +1,14 @@
-setuptools==77.0.3
-fastapi==0.115.12
-uvicorn==0.24.0
-pydantic==2.11.5
-transformers==4.52.4
-torch==2.7.0
-numpy==1.26.4
-debugpy==1.8.0
-pytest==8.4.0
-httpx==0.27.0 
-pytest-asyncio==1.0.0
-vllm==0.9.0.1
+setuptools>=70.0.0
+fastapi>=0.110.0
+uvicorn>=0.24.0
+pydantic>=2.0.0
+transformers>=4.51.0,<4.52.0
+torch>=2.2.0
+numpy>=1.26.0
+debugpy>=1.8.0
+pytest>=8.0.0
+httpx>=0.27.0,<0.28
+pytest-asyncio>=0.23.0
+# vllm is NOT installed via this file on macOS.
+# PyPI only ships Linux+CUDA wheels for vllm; on macOS it must be built from
+# source for the CPU backend. See README.md / README_KOR.md "macOS" 섹션.
