@@ -58,20 +58,56 @@
   - 모델 저장 및 조회 관리
   - 모델 초기화 및 설정 관리
 
-## 환경 설정 (Setup)
+---
 
-1. `python3`를 사용한 가상환경 생성:
+## 환경 설정 및 실행 방법 (Setup Options)
+
+환경 및 운영체제 조건에 따라 아래 세 가지 방법 중 하나를 선택하여 진행합니다. (`requirements.txt` 상단 주석 참조)
+
+### [방법 1] 추천 / 최신 방식 (`uv` + Python 3.11)
+> `requirements.txt` 파일의 **`## Setup 1 & 2`** 목록을 사용하는 방법입니다.
+
+초고속 파이썬 패키지/버전 관리 도구인 `uv`를 사용하면, 시스템에 파이썬 3.11이 설치되어 있지 않더라도 자동으로 3.11 버전을 가져와 완벽한 격리 환경을 구축합니다.
+
 ```bash
+# 1. uv를 이용해 파이썬 3.11 가상환경 생성
+uv venv .venv --python 3.11
+
+# 2. 가상환경 활성화 (macOS/Linux)
+source .venv/bin/activate  # Windows 환경: .venv\Scripts\activate
+
+# 3. uv pip 명령어로 의존성 패키지 초고속 설치
+uv pip install -r requirements.txt
+
+# 4. uv를 통해 파이썬 3.11 서버 실행
+uv run --python 3.11 python main.py
+```
+
+---
+
+### [방법 2] 기본 방식 (`python3` + `venv`)
+> `requirements.txt` 파일의 **`## Setup 1 & 2`** 목록을 사용하는 방법입니다.
+
+시스템에 기본으로 설치된 표준 파이썬 3 도구를 사용하는 기존 방식입니다.
+
+```bash
+# 1. 시스템 기본 python3 명령어로 가상환경 생성
 python3 -m venv venv
+
+# 2. 가상환경 활성화 (macOS/Linux)
 source venv/bin/activate  # Windows 환경: venv\Scripts\activate
-```
 
-2. 의존성 패키지 설치:
-```bash
+# 3. pip 명령어로 의존성 패키지 설치
 pip install -r requirements.txt
+
+# 4. python3 명령어로 서버 실행
+python3 main.py
 ```
 
-### macOS (Apple Silicon)에서는 vLLM을 소스로 직접 빌드해야 함
+---
+
+### [방법 3] macOS (Apple Silicon) vLLM 소스 직접 빌드 가이드
+> `requirements.txt` 파일의 **`## Setup 3`** 주석 목록을 참조하는 방법입니다.
 
 macOS에서는 `pip install -r requirements.txt`만으로 **vLLM이 설치되지 않습니다**.
 PyPI에는 Linux+CUDA용 사전빌드 wheel만 올라와 있어서, macOS에서 `pip install vllm`을
@@ -116,8 +152,7 @@ cd .build/vllm && pip install --no-build-isolation -e . && cd -
 #    다시 맞춰준다:
 pip install "torchaudio==2.6.0"
 
-# 5. 이 프로젝트의 나머지 의존성을 설치한다 (requirements.txt의 vLLM 줄은
-#    위에서 이미 소스로 설치했기 때문에 일부러 주석 처리되어 있다).
+# 5. 이 프로젝트의 나머지 의존성을 설치한다 (requirements.txt의 Setup 3 참조).
 pip install -r requirements.txt
 ```
 
@@ -132,26 +167,11 @@ vLLM 0.8.3는 transformers 5.x의 토크나이저 API 변경 이전 버전이라
 사용할 수 있어서 이 데모의 구조를 학습하는 데는 문제없지만, 속도는 느리고
 FP32/FP16만 지원합니다.
 
-## 서비스 실행 (Running the Service)
+---
 
-`python3` 명령어로 서비스를 실행합니다:
-```bash
-python3 main.py
+서비스 실행 후 웹 브라우저에서 **`http://localhost:8080/`**에 접속하여 내장 프론트엔드 UI 플레이그라운드를 이용할 수 있습니다. (포트 변경 시 `PORT=8080 python3 main.py`)
 
-# 또는 특정 포트 지정 실행
-PORT=8080 python3 main.py
-```
-
-서비스 실행 후 `http://localhost:8080` (기본 포트)에서 접속 가능합니다.
-
-**macOS 참고사항**: vLLM CPU 백엔드는 워커가 1개뿐이어도 `torch.distributed`
-프로세스 그룹을 띄우는데, 사내망/VPN에 연결된 머신에서는 그 네트워크의 IP로
-바인딩을 시도하다가 무한정 멈출 수 있습니다. 이때 로그에는 약 75초 간격으로
-`[c10d] The server socket on [...]:PORT has timed out, will retry.`가 반복
-출력됩니다. 기동이 여기서 멈추면 loopback으로 강제해서 실행하세요:
-```bash
-VLLM_HOST_IP=127.0.0.1 python3 main.py
-```
+---
 
 ## 웹 프론트엔드 플레이그라운드 (Web Frontend Playground)
 

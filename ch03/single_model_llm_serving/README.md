@@ -58,20 +58,56 @@ The system is designed with a modular architecture that separates concerns acros
   - Manages model storage and retrieval
   - Handles model initialization and configuration
 
-## Setup
+---
 
-1. Create a virtual environment using `python3`:
+## Setup & Execution Options
+
+Choose one of the three setup methods below based on your environment preference. (See `requirements.txt` comments for setup details)
+
+### Method 1: Modern & Recommended (`uv` + Python 3.11)
+> Uses active dependencies under **`## Setup 1 & 2`** in `requirements.txt`.
+
+Use `uv` (ultra-fast Rust-based Python manager) to automatically fetch Python 3.11 and create an isolated virtual environment:
+
 ```bash
+# 1. Create a Python 3.11 virtual environment via uv
+uv venv .venv --python 3.11
+
+# 2. Activate the virtual environment
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# 3. Install requirements using uv
+uv pip install -r requirements.txt
+
+# 4. Run the LLM server using uv
+uv run --python 3.11 python main.py
+```
+
+---
+
+### Method 2: Standard Python (`python3` + `venv`)
+> Uses active dependencies under **`## Setup 1 & 2`** in `requirements.txt`.
+
+Use standard system Python 3 tools:
+
+```bash
+# 1. Create a virtual environment using system python3
 python3 -m venv venv
+
+# 2. Activate the virtual environment
 source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
 
-2. Install dependencies:
-```bash
+# 3. Install requirements using standard pip
 pip install -r requirements.txt
+
+# 4. Run the LLM server
+python3 main.py
 ```
 
-### macOS (Apple Silicon): vLLM must be built from source
+---
+
+### Method 3: macOS (Apple Silicon) vLLM Source Build Guide
+> Uses commented dependencies under **`## Setup 3`** in `requirements.txt`.
 
 `pip install -r requirements.txt` does **not** install vLLM on macOS. PyPI only
 ships pre-built vLLM wheels for Linux+CUDA, so on macOS `pip install vllm` falls
@@ -113,9 +149,7 @@ cd .build/vllm && pip install --no-build-isolation -e . && cd -
 #    (`Symbol not found: _aoti_torch_abi_version` on import). Pin it back down:
 pip install "torchaudio==2.6.0"
 
-# 5. Install the rest of this project's requirements (the vLLM line in
-#    requirements.txt is commented out on purpose — it's already installed
-#    from source above).
+# 5. Install the rest of this project's requirements (see Setup 3 in requirements.txt).
 pip install -r requirements.txt
 ```
 
@@ -130,26 +164,11 @@ kernels, high-throughput continuous batching) require an NVIDIA GPU. On macOS
 you only get the CPU backend, which works for learning the architecture in
 this demo but is slow and limited to FP32/FP16.
 
-## Running the Service
+---
 
-Start the service using `python3`:
-```bash
-python3 main.py
+Once started, the service and Web UI Playground will be available at **`http://localhost:8080/`** (or `PORT=8080 python3 main.py`).
 
-# Or specify a custom port
-PORT=8080 python3 main.py
-```
-
-The service will be available at http://localhost:8080 (or your configured `PORT`).
-
-**macOS note**: vLLM's CPU backend starts a `torch.distributed` process group even
-for a single worker, and on a machine connected to a corporate VPN/network it can
-try to bind to that network's IP and hang indefinitely, retrying every ~75s with
-`[c10d] The server socket on [...]:PORT has timed out, will retry.` in the logs.
-If startup hangs there, force it onto loopback:
-```bash
-VLLM_HOST_IP=127.0.0.1 python3 main.py
-```
+---
 
 ## Web Frontend Playground
 

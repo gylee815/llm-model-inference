@@ -1,14 +1,43 @@
+# ==============================================================================
+# Single Model LLM Serving - Requirements
+# ==============================================================================
+# [방법 1] uv + Python 3.11 사용 시 (추천 / 초고속)
+#   - 아래 ## Setup 1 & 2 활성화 목록 사용
+#   - 실행: uv venv .venv --python 3.11 -> source .venv/bin/activate -> uv pip install -r requirements.txt -> uv run --python 3.11 python main.py
+#
+# [방법 2] 표준 python3 + venv 사용 시
+#   - 아래 ## Setup 1 & 2 활성화 목록 사용
+#   - 실행: python3 -m venv venv -> source venv/bin/activate -> pip install -r requirements.txt -> python3 main.py
+#
+# [방법 3] macOS (Apple Silicon) vLLM 소스 직접 빌드 시
+#   - 아래 ## Setup 3 주석 목록 참고 (vLLM은 소스 컴파일 후 나머지 의존성만 설치)
+#   - 실행: README.md / README_KOR.md 의 [방법 3] 가이드 참조
+# ==============================================================================
+
+## Setup 1 & 2 (방법 1, 방법 2 전용)
 setuptools>=70.0.0
 fastapi>=0.110.0
 uvicorn>=0.24.0
 pydantic>=2.0.0
-transformers>=4.51.0,<4.52.0
+transformers>=4.40.0
 torch>=2.2.0
 numpy>=1.26.0
 debugpy>=1.8.0
 pytest>=8.0.0
-httpx>=0.27.0,<0.28
+httpx>=0.27.0
 pytest-asyncio>=0.23.0
-# vllm is NOT installed via this file on macOS.
-# PyPI only ships Linux+CUDA wheels for vllm; on macOS it must be built from
-# source for the CPU backend. See README.md / README_KOR.md "macOS" 섹션.
+vllm>=0.6.0
+
+## Setup 3 (방법 3: macOS Apple Silicon vLLM 소스 직접 빌드 전용)
+# setuptools>=70.0.0
+# fastapi>=0.110.0
+# uvicorn>=0.24.0
+# pydantic>=2.0.0
+# transformers>=4.51.0,<4.52.0
+# torch>=2.2.0
+# numpy>=1.26.0
+# debugpy>=1.8.0
+# pytest>=8.0.0
+# httpx>=0.27.0,<0.28
+# pytest-asyncio>=0.23.0
+# # vllm은 .build/vllm 소스에서 직접 빌드되므로 requirements.txt 설치 대상에서 주석 처리됨.
